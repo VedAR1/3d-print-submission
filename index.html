@@ -1,367 +1,211 @@
 <!DOCTYPE html>
-
 <html>
-
 <head>
-
-<title>3D Print Submission</title>
-
-<style>
-
-body { font-family: Arial; max-width: 700px; margin: auto; }
-
-label { display:block; margin-top:10px; }
-
-small { color: #555; }
-
-</style>
-
+  <title>3D Print Submission</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 700px; margin: 30px auto; padding: 0 20px; color: #333; }
+    h2 { border-bottom: 2px solid #eee; padding-bottom: 10px; }
+    label { display:block; margin-top:15px; font-weight: bold; }
+    input, select, textarea { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    small { color: #666; font-weight: normal; }
+    #dimensions { margin-top: 15px; display: none; }
+    .dim-box { padding: 15px; border: 1px solid #007bff; background: #f0f7ff; border-radius: 4px; }
+    button { background: #28a745; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; margin-top: 25px; width: 100%; font-size: 16px; font-weight: bold; }
+    button:hover { background: #218838; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+  </style>
 </head>
-
 <body>
-
-
 
 <h2>3D Print Submission</h2>
 
-
-
 <label>Name</label>
-
-<input id="name" required>
-
-
+<input id="name" placeholder="First and Last Name" required>
 
 <label>Student ID</label>
+<input id="studentId" placeholder="Enter ID number" required>
 
-<input id="studentId" required>
-
-
-
-<label>3D File (STL or OBJ only)</label>
-
+<label>3D File <small>(STL or OBJ only)</small></label>
 <input type="file" id="fileInput" accept=".stl,.obj" required>
-
-
 
 <div id="dimensions"></div>
 
-
+<hr style="margin-top:25px; border: 0; border-top: 1px solid #eee;">
 
 <h3>Print Settings</h3>
 
+<label>Material <small>(PLA is standard)</small></label>
+<input id="material" value="PLA">
 
-
-<label>Material <small>(PLA, PETG, etc.)</small></label>
-
-<input id="material">
-
-
-
-<label>Infill % <small>(How solid the part is inside)</small></label>
-
+<label>Infill % <small>(15% is standard for non-functional parts)</small></label>
 <input id="infill" type="number" value="15">
 
-
-
-<label>Layer Height (mm) <small>(0.2 = standard quality)</small></label>
-
+<label>Layer Height (mm) <small>(0.2 = standard, 0.1 = high detail)</small></label>
 <input id="layerHeight" value="0.2">
 
-
-
-<label>Supports <small>(Enable if your model has overhangs)</small></label>
-
+<label>Supports <small>(Needed for overhangs)</small></label>
 <select id="supports">
-
-<option>No</option>
-
-<option>Yes</option>
-
+  <option>No</option>
+  <option>Yes</option>
 </select>
 
-
-
-<label>Brim <small>(Improves bed adhesion)</small></label>
-
+<label>Brim <small>(Helps parts stick to the bed)</small></label>
 <select id="brim">
-
-<option>No</option>
-
-<option>Yes</option>
-
+  <option>No</option>
+  <option>Yes</option>
 </select>
-
-
 
 <label>Notes (optional)</label>
+<textarea id="notes" placeholder="Any specific instructions..."></textarea>
 
-<textarea id="notes"></textarea>
-
-
-
-<br><br>
-
-<button onclick="submitForm()">Submit</button>
-
-
-
-<script src="https://cdn.jsdelivr.net/npm/stl-reader-wasm@1.0.1/dist/stl-reader.min.js"></script>
-
-
+<button id="submitBtn" onclick="submitForm()">Submit Request</button>
 
 <script>
-
 let fileBase64 = "";
-
 let dimX = 0, dimY = 0, dimZ = 0;
 
-
-
 const fileInput = document.getElementById("fileInput");
-
 const dimensionsDiv = document.getElementById("dimensions");
-
-
+const submitBtn = document.getElementById("submitBtn");
 
 fileInput.addEventListener("change", handleFile);
 
-
-
 async function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
 
-const file = e.target.files[0];
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!["stl", "obj"].includes(ext)) {
+    alert("Please upload an STL or OBJ file.");
+    fileInput.value = "";
+    return;
+  }
 
-if (!file) return;
+  // Reader for Base64 (Upload)
+  const base64Reader = new FileReader();
+  base64Reader.onload = (event) => {
+    fileBase64 = event.target.result.split(",")[1];
+  };
+  base64Reader.readAsDataURL(file);
 
+  // Reader for Geometry (Dimensions)
+  try {
+    dimensionsDiv.style.display = "block";
+    dimensionsDiv.innerHTML = "<em>Analyzing file geometry...</em>";
 
+    if (ext === "stl") {
+      const buffer = await file.arrayBuffer();
+      parseSTL(buffer);
+    } else {
+      const text = await file.text();
+      parseOBJ(text);
+    }
 
-const ext = file.name.split('.').pop().toLowerCase();
-
-if (!["stl", "obj"].includes(ext)) {
-
-alert("Only STL and OBJ files are supported.");
-
-fileInput.value = "";
-
-return;
-
+    dimensionsDiv.innerHTML = `
+      <div class="dim-box">
+        <strong>Detected Dimensions:</strong><br>
+        X: ${dimX} mm | Y: ${dimY} mm | Z: ${dimZ} mm<br>
+        <small style="color:#d9534f;">Confirm these match your slicer before submitting.</small>
+      </div>
+    `;
+  } catch (err) {
+    console.error(err);
+    dimensionsDiv.innerHTML = "<b style='color:red;'>Error: Could not calculate dimensions.</b>";
+  }
 }
 
+function parseSTL(buffer) {
+  const view = new DataView(buffer);
+  let isBinary = true;
+  for (let i = 0; i < 80; i++) {
+    if (view.getUint8(i) === 0) { isBinary = true; break; }
+    if (i === 79) isBinary = false;
+  }
 
+  let min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
 
-// base64 for upload
-
-const base64Reader = new FileReader();
-
-base64Reader.onload = function(event) {
-
-fileBase64 = event.target.result.split(",")[1];
-
-};
-
-base64Reader.readAsDataURL(file);
-
-
-
-try {
-
-if (ext === "stl") {
-
-const buffer = await file.arrayBuffer();
-
-const result = window.STLReader.read(buffer);
-
-
-
-const bounds = result.bounds;
-
-dimX = (bounds.max[0] - bounds.min[0]).toFixed(2);
-
-dimY = (bounds.max[1] - bounds.min[1]).toFixed(2);
-
-dimZ = (bounds.max[2] - bounds.min[2]).toFixed(2);
-
-
-
-} else {
-
-const text = await file.text();
-
-parseOBJ(text);
-
+  if (isBinary) {
+    const count = view.getUint32(84, true);
+    for (let i = 0; i < count; i++) {
+      for (let v = 0; v < 3; v++) {
+        const offset = 88 + (i * 50) + (v * 12) + 12;
+        updateBounds(view.getFloat32(offset, true), view.getFloat32(offset + 4, true), view.getFloat32(offset + 8, true), min, max);
+      }
+    }
+  } else {
+    const text = new TextDecoder().decode(buffer);
+    const matches = text.matchAll(/vertex\s+(-?\d+\.?\d*e?-?\d*)\s+(-?\d+\.?\d*e?-?\d*)\s+(-?\d+\.?\d*e?-?\d*)/gi);
+    for (const m of matches) {
+      updateBounds(parseFloat(m[1]), parseFloat(m[2]), parseFloat(m[3]), min, max);
+    }
+  }
+  dimX = (max[0] - min[0]).toFixed(2);
+  dimY = (max[1] - min[1]).toFixed(2);
+  dimZ = (max[2] - min[2]).toFixed(2);
 }
-
-
-
-dimensionsDiv.innerHTML = `
-
-<div style="margin-top:10px; padding:10px; border:1px solid #ccc;">
-
-<b>Detected Dimensions</b><br>
-
-X: ${dimX} mm<br>
-
-Y: ${dimY} mm<br>
-
-Z: ${dimZ} mm<br><br>
-
-<b>Verify these before submitting.</b>
-
-</div>
-
-`;
-
-
-
-} catch (err) {
-
-console.error(err);
-
-alert("Could not read dimensions from this file.");
-
-}
-
-}
-
-
-
-/* ---------- OBJ PARSER ---------- */
 
 function parseOBJ(text) {
-
-const lines = text.split("\n");
-
-let minX = Infinity, minY = Infinity, minZ = Infinity;
-
-let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
-
-
-
-lines.forEach(line => {
-
-line = line.trim();
-
-if (line.startsWith("v ")) {
-
-const parts = line.split(/\s+/);
-
-const x = parseFloat(parts[1]);
-
-const y = parseFloat(parts[2]);
-
-const z = parseFloat(parts[3]);
-
-
-
-minX = Math.min(minX, x);
-
-minY = Math.min(minY, y);
-
-minZ = Math.min(minZ, z);
-
-maxX = Math.max(maxX, x);
-
-maxY = Math.max(maxY, y);
-
-maxZ = Math.max(maxZ, z);
-
+  let min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+  text.split("\n").forEach(line => {
+    if (line.trim().startsWith("v ")) {
+      const p = line.trim().split(/\s+/);
+      updateBounds(parseFloat(p[1]), parseFloat(p[2]), parseFloat(p[3]), min, max);
+    }
+  });
+  dimX = (max[0] - min[0]).toFixed(2);
+  dimY = (max[1] - min[1]).toFixed(2);
+  dimZ = (max[2] - min[2]).toFixed(2);
 }
 
-});
-
-
-
-dimX = (maxX - minX).toFixed(2);
-
-dimY = (maxY - minY).toFixed(2);
-
-dimZ = (maxZ - minZ).toFixed(2);
-
+function updateBounds(x, y, z, min, max) {
+  if (isNaN(x)) return;
+  min[0] = Math.min(min[0], x); max[0] = Math.max(max[0], x);
+  min[1] = Math.min(min[1], y); max[1] = Math.max(max[1], y);
+  min[2] = Math.min(min[2], z); max[2] = Math.max(max[2], z);
 }
-
-
 
 function submitForm() {
+  if (!dimX || dimX == 0) return alert("Please upload a valid 3D file first.");
 
-if (!dimX || !dimY || !dimZ) {
+  submitBtn.disabled = true;
+  submitBtn.innerText = "Processing...";
 
-alert("Dimensions not detected. Upload a valid STL or OBJ file.");
+  const data = {
+    name: document.getElementById("name").value,
+    studentId: document.getElementById("studentId").value,
+    fileName: fileInput.files[0].name,
+    fileData: fileBase64,
+    mimeType: fileInput.files[0].type,
+    dimX, dimY, dimZ,
+    material: document.getElementById("material").value,
+    infill: document.getElementById("infill").value,
+    layerHeight: document.getElementById("layerHeight").value,
+    supports: document.getElementById("supports").value,
+    brim: document.getElementById("brim").value,
+    notes: document.getElementById("notes").value
+  };
 
-return;
-
+  fetch("https://script.google.com/macros/s/AKfycbzrBniPiXCD9yEZlH4s9TjqGcN2UMjGxPhipH98VjVPslUPJvrP37neFRwMAfzVwv4k/exec", {
+    method: "POST",
+    body: JSON.stringify(data)
+  })
+  .then(res => res.json())
+  .then(res => {
+    if (res.status === "success") {
+      alert("Print request submitted successfully!");
+      location.reload();
+    } else {
+      alert("Error: " + res.message);
+      submitBtn.disabled = false;
+      submitBtn.innerText = "Submit Request";
+    }
+  })
+  .catch(err => {
+    alert("Submission failed. Please check your connection.");
+    submitBtn.disabled = false;
+    submitBtn.innerText = "Submit Request";
+  });
 }
-
-
-
-const data = {
-
-name: document.getElementById("name").value,
-
-studentId: document.getElementById("studentId").value,
-
-fileName: fileInput.files[0].name,
-
-fileData: fileBase64,
-
-mimeType: fileInput.files[0].type,
-
-dimX,
-
-dimY,
-
-dimZ,
-
-material: document.getElementById("material").value,
-
-infill: document.getElementById("infill").value,
-
-layerHeight: document.getElementById("layerHeight").value,
-
-supports: document.getElementById("supports").value,
-
-brim: document.getElementById("brim").value,
-
-notes: document.getElementById("notes").value
-
-};
-
-
-
-fetch("https://script.google.com/macros/s/AKfycbzrBniPiXCD9yEZlH4s9TjqGcN2UMjGxPhipH98VjVPslUPJvrP37neFRwMAfzVwv4k/exec", {
-
-method: "POST",
-
-body: JSON.stringify(data)
-
-})
-
-.then(res => res.json())
-
-.then(res => {
-
-if (res.status === "success") {
-
-alert("Submission successful.");
-
-location.reload();
-
-} else {
-
-alert("Error: " + res.message);
-
-}
-
-})
-
-.catch(err => alert("Submission failed: " + err));
-
-}
-
 </script>
-
-
-
 </body>
-
 </html>
