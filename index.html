@@ -162,7 +162,7 @@ function submitForm() {
     notes: document.getElementById("notes").value
   };
 
-  fetch("PASTE_YOUR_APPS_SCRIPT_URL_HERE", {
+  fetch("https://script.google.com/macros/s/AKfycbzrBniPiXCD9yEZlH4s9TjqGcN2UMjGxPhipH98VjVPslUPJvrP37neFRwMAfzVwv4k/exec", {
     method: "POST",
     body: JSON.stringify(data)
   })
