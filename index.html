@@ -190,7 +190,7 @@ function submitForm() {
     file: btoa(finalSTL)
   };
 
-  fetch("PUT_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE", {
+  fetch("https://script.google.com/macros/s/AKfycbyScZM0rFdCmLdFsQ8G0einZ54o68HMKIgb1_X8F9ywi9orSS1EvN1CDwndEiJhhJja/exec", {
     method: "POST",
     body: JSON.stringify(payload)
   })
