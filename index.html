@@ -52,6 +52,8 @@
 <br><br>
 <button onclick="submitForm()">Submit</button>
 
+<script src="https://cdn.jsdelivr.net/npm/stl-reader-wasm@1.0.1/dist/stl-reader.min.js"></script>
+
 <script>
 let fileBase64 = "";
 let dimX = 0, dimY = 0, dimZ = 0;
@@ -61,7 +63,7 @@ const dimensionsDiv = document.getElementById("dimensions");
 
 fileInput.addEventListener("change", handleFile);
 
-function handleFile(e) {
+async function handleFile(e) {
   const file = e.target.files[0];
   if (!file) return;
 
@@ -72,101 +74,49 @@ function handleFile(e) {
     return;
   }
 
-  // Base64 for upload
+  // base64 for upload
   const base64Reader = new FileReader();
   base64Reader.onload = function(event) {
     fileBase64 = event.target.result.split(",")[1];
   };
   base64Reader.readAsDataURL(file);
 
-  const reader = new FileReader();
-  reader.onload = function(event) {
-    try {
-      let vertices = [];
+  try {
+    if (ext === "stl") {
+      const buffer = await file.arrayBuffer();
+      const result = window.STLReader.read(buffer);
 
-      if (ext === "stl") {
-        const buffer = normalizeSTLBuffer(event.target.result);
-        vertices = parseSTL(buffer);
-      } else {
-        vertices = parseOBJ(event.target.result);
-      }
+      const bounds = result.bounds;
+      dimX = (bounds.max[0] - bounds.min[0]).toFixed(2);
+      dimY = (bounds.max[1] - bounds.min[1]).toFixed(2);
+      dimZ = (bounds.max[2] - bounds.min[2]).toFixed(2);
 
-      if (vertices.length === 0) throw new Error("No vertices parsed.");
-
-      let minX = Infinity, minY = Infinity, minZ = Infinity;
-      let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
-
-      vertices.forEach(v => {
-        minX = Math.min(minX, v[0]);
-        minY = Math.min(minY, v[1]);
-        minZ = Math.min(minZ, v[2]);
-        maxX = Math.max(maxX, v[0]);
-        maxY = Math.max(maxY, v[1]);
-        maxZ = Math.max(maxZ, v[2]);
-      });
-
-      dimX = (maxX - minX).toFixed(2);
-      dimY = (maxY - minY).toFixed(2);
-      dimZ = (maxZ - minZ).toFixed(2);
-
-      dimensionsDiv.innerHTML = `
-        <div style="margin-top:10px; padding:10px; border:1px solid #ccc;">
-          <b>Detected Dimensions</b><br>
-          X: ${dimX} mm<br>
-          Y: ${dimY} mm<br>
-          Z: ${dimZ} mm<br><br>
-          <b>Verify these before submitting.</b>
-        </div>
-      `;
-
-    } catch (err) {
-      console.error(err);
-      alert("Could not read dimensions from this file.");
-    }
-  };
-
-  if (ext === "stl") reader.readAsArrayBuffer(file);
-  else reader.readAsText(file);
-}
-
-/* ---------- NORMALIZER ---------- */
-function normalizeSTLBuffer(buffer) {
-  // Force copy into clean ArrayBuffer to strip browser quirks
-  const uint8 = new Uint8Array(buffer);
-  const clean = new Uint8Array(uint8.length);
-  clean.set(uint8);
-  return clean.buffer;
-}
-
-/* ---------- STL PARSER ---------- */
-function parseSTL(buffer) {
-  const dv = new DataView(buffer);
-  const vertices = [];
-
-  const faceCount = dv.getUint32(80, true);
-  let offset = 84;
-
-  for (let i = 0; i < faceCount; i++) {
-    offset += 12; // normal
-
-    for (let j = 0; j < 3; j++) {
-      const x = dv.getFloat32(offset, true);
-      const y = dv.getFloat32(offset + 4, true);
-      const z = dv.getFloat32(offset + 8, true);
-      vertices.push([x, y, z]);
-      offset += 12;
+    } else {
+      const text = await file.text();
+      parseOBJ(text);
     }
 
-    offset += 2; // attribute byte count
+    dimensionsDiv.innerHTML = `
+      <div style="margin-top:10px; padding:10px; border:1px solid #ccc;">
+        <b>Detected Dimensions</b><br>
+        X: ${dimX} mm<br>
+        Y: ${dimY} mm<br>
+        Z: ${dimZ} mm<br><br>
+        <b>Verify these before submitting.</b>
+      </div>
+    `;
+
+  } catch (err) {
+    console.error(err);
+    alert("Could not read dimensions from this file.");
   }
-
-  return vertices;
 }
 
 /* ---------- OBJ PARSER ---------- */
 function parseOBJ(text) {
-  const vertices = [];
   const lines = text.split("\n");
+  let minX = Infinity, minY = Infinity, minZ = Infinity;
+  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
 
   lines.forEach(line => {
     line = line.trim();
@@ -175,11 +125,19 @@ function parseOBJ(text) {
       const x = parseFloat(parts[1]);
       const y = parseFloat(parts[2]);
       const z = parseFloat(parts[3]);
-      vertices.push([x, y, z]);
+
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      minZ = Math.min(minZ, z);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+      maxZ = Math.max(maxZ, z);
     }
   });
 
-  return vertices;
+  dimX = (maxX - minX).toFixed(2);
+  dimY = (maxY - minY).toFixed(2);
+  dimZ = (maxZ - minZ).toFixed(2);
 }
 
 function submitForm() {
@@ -221,9 +179,6 @@ function submitForm() {
   .catch(err => alert("Submission failed: " + err));
 }
 </script>
-
-
-
 
 </body>
 </html>
