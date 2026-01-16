@@ -58,60 +58,97 @@
 
 <script>
 let fileBase64 = "";
-let dimX, dimY, dimZ;
+let dimX = 0, dimY = 0, dimZ = 0;
 
-document.getElementById("fileInput").addEventListener("change", handleFile);
+const fileInput = document.getElementById("fileInput");
+const dimensionsDiv = document.getElementById("dimensions");
+
+fileInput.addEventListener("change", handleFile);
 
 function handleFile(e) {
   const file = e.target.files[0];
+  if (!file) return;
+
   const ext = file.name.split('.').pop().toLowerCase();
+
   if (!["stl", "obj"].includes(ext)) {
     alert("Only STL and OBJ files are supported.");
+    fileInput.value = "";
     return;
   }
 
-  const reader = new FileReader();
-  reader.onload = function(event) {
+  // Base64 for upload
+  const base64Reader = new FileReader();
+  base64Reader.onload = function(event) {
     fileBase64 = event.target.result.split(",")[1];
-    calculateDimensions(file, ext);
   };
-  reader.readAsDataURL(file);
-}
+  base64Reader.readAsDataURL(file);
 
-function calculateDimensions(file, ext) {
+  // Dimension calculation
   const reader = new FileReader();
-  reader.onload = function(e) {
-    const loader = ext === "stl" ? new THREE.STLLoader() : new THREE.OBJLoader();
-    const object = loader.parse(e.target.result);
+
+  reader.onload = function(event) {
+    let object;
+
+    if (ext === "stl") {
+      const loader = new THREE.STLLoader();
+      const geometry = loader.parse(event.target.result);
+      object = new THREE.Mesh(geometry);
+    }
+
+    if (ext === "obj") {
+      const loader = new THREE.OBJLoader();
+      object = loader.parse(event.target.result);
+    }
 
     const box = new THREE.Box3().setFromObject(object);
+
     dimX = (box.max.x - box.min.x).toFixed(2);
     dimY = (box.max.y - box.min.y).toFixed(2);
     dimZ = (box.max.z - box.min.z).toFixed(2);
 
-    document.getElementById("dimensions").innerHTML =
-      `<b>Dimensions:</b> ${dimX} x ${dimY} x ${dimZ} mm<br><b>Please verify these are correct.</b>`;
+    dimensionsDiv.innerHTML = `
+      <div style="margin-top:10px; padding:10px; border:1px solid #ccc;">
+        <b>Detected Dimensions (mm)</b><br>
+        X: ${dimX} mm<br>
+        Y: ${dimY} mm<br>
+        Z: ${dimZ} mm<br><br>
+        <b>IMPORTANT:</b> Verify these are correct before submitting.
+      </div>
+    `;
   };
-  reader.readAsArrayBuffer(file);
+
+  if (ext === "stl") {
+    reader.readAsArrayBuffer(file);
+  } else {
+    reader.readAsText(file);
+  }
 }
 
 function submitForm() {
+  if (!dimX || !dimY || !dimZ) {
+    alert("Dimensions not detected. Please upload a valid STL or OBJ file.");
+    return;
+  }
+
   const data = {
-    name: name.value,
-    studentId: studentId.value,
+    name: document.getElementById("name").value,
+    studentId: document.getElementById("studentId").value,
     fileName: fileInput.files[0].name,
     fileData: fileBase64,
     mimeType: fileInput.files[0].type,
-    dimX, dimY, dimZ,
-    material: material.value,
-    infill: infill.value,
-    layerHeight: layerHeight.value,
-    supports: supports.value,
-    brim: brim.value,
-    notes: notes.value
+    dimX: dimX,
+    dimY: dimY,
+    dimZ: dimZ,
+    material: document.getElementById("material").value,
+    infill: document.getElementById("infill").value,
+    layerHeight: document.getElementById("layerHeight").value,
+    supports: document.getElementById("supports").value,
+    brim: document.getElementById("brim").value,
+    notes: document.getElementById("notes").value
   };
 
-  fetch("https://script.google.com/macros/s/AKfycbxkbaIW2ov1l7RumNFCC8BUqECy1Ujxu5kb0S7HK8tj3eIX1M9TD056nsK1jjVWBu23/exec", {
+  fetch("PASTE_YOUR_APPS_SCRIPT_URL_HERE", {
     method: "POST",
     body: JSON.stringify(data)
   })
@@ -119,12 +156,17 @@ function submitForm() {
   .then(res => {
     if (res.status === "success") {
       alert("Submission successful.");
+      location.reload();
     } else {
       alert("Error: " + res.message);
     }
+  })
+  .catch(err => {
+    alert("Submission failed: " + err);
   });
 }
 </script>
+
 
 </body>
 </html>
