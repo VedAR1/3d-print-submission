@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>3D Print Submission</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; max-width: 900px; margin: 2rem auto; padding: 0 1rem; color: #111; }
+    header { display:flex; align-items:center; gap:16px; }
+    h1 { margin: 0; }
+    form { margin-top: 1.25rem; display:grid; gap:0.75rem; }
+    label { font-weight:600; }
+    input, textarea, select { padding:0.5rem; border:1px solid #ccc; border-radius:6px; }
+    .note { font-size:0.9rem; color:#444; }
+    .actions { margin-top:1rem; }
+    button{ background:#0366d6; color:#fff; border:none; padding:0.6rem 1rem; border-radius:6px; cursor:pointer }
+    button:disabled{ opacity:0.6 }
+    footer{ margin-top:2rem; font-size:0.9rem; color:#555 }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>3D Print Submission</h1>
+  </header>
+
+  <p class="note">Use this form to submit a 3D model for printing. Please provide an STL/OBJ file and any printing notes.</p>
+
+  <form id="submission" action="#" method="post" enctype="multipart/form-data">
+    <div>
+      <label for="name">Your name</label>
+      <input id="name" name="name" type="text" placeholder="Jane Doe" required>
+    </div>
+
+    <div>
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" placeholder="you@example.com" required>
+    </div>
+
+    <div>
+      <label for="model">Model name</label>
+      <input id="model" name="model" type="text" placeholder="Widget v2">
+    </div>
+
+    <div>
+      <label for="file">3D file (STL / OBJ)</label>
+      <input id="file" name="file" type="file" accept=".stl,.obj" required>
+    </div>
+
+    <div>
+      <label for="notes">Printing notes</label>
+      <textarea id="notes" name="notes" rows="4" placeholder="Material, infill, orientation, supports..."></textarea>
+    </div>
+
+    <div class="actions">
+      <button type="submit">Submit</button>
+    </div>
+  </form>
+
+  <footer>
+    <p>Guidelines: Keep file size under 50MB. Make sure models are manifold and scaled correctly.</p>
+  </footer>
+
+  <script>
+    // Minimal client-side validation example
+    document.getElementById('submission').addEventListener('submit', function(e){
+      const f = document.getElementById('file');
+      if (!f.files || f.files.length === 0) {
+        e.preventDefault();
+        alert('Please attach an STL or OBJ file.');
+      }
+    });
+  </script>
+</body>
+</html>
