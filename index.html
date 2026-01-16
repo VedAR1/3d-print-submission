@@ -111,7 +111,7 @@ function submitForm() {
     notes: notes.value
   };
 
-  fetch("PASTE_YOUR_APPS_SCRIPT_URL_HERE", {
+  fetch("https://script.google.com/macros/s/AKfycbxkbaIW2ov1l7RumNFCC8BUqECy1Ujxu5kb0S7HK8tj3eIX1M9TD056nsK1jjVWBu23/exec", {
     method: "POST",
     body: JSON.stringify(data)
   })
