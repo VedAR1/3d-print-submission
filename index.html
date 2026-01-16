@@ -1,211 +1,319 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>3D Print Submission</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 700px; margin: 30px auto; padding: 0 20px; color: #333; }
-    h2 { border-bottom: 2px solid #eee; padding-bottom: 10px; }
-    label { display:block; margin-top:15px; font-weight: bold; }
-    input, select, textarea { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-    small { color: #666; font-weight: normal; }
-    #dimensions { margin-top: 15px; display: none; }
-    .dim-box { padding: 15px; border: 1px solid #007bff; background: #f0f7ff; border-radius: 4px; }
-    button { background: #28a745; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; margin-top: 25px; width: 100%; font-size: 16px; font-weight: bold; }
-    button:hover { background: #218838; }
-    button:disabled { background: #ccc; cursor: not-allowed; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Print Submission</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .container {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            margin-top: 0;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            margin-top: 25px;
+            font-size: 1.2rem;
+            color: #475569;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        small {
+            display: block;
+            color: #64748b;
+            font-weight: normal;
+            margin-bottom: 5px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            ring: 2px solid #bfdbfe;
+        }
+
+        #dimensions-box {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f1f5f9;
+            border-left: 4px solid var(--primary-color);
+            border-radius: 4px;
+            display: none; /* Hidden until file is uploaded */
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        button:hover {
+            background-color: #1d4ed8;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body>
 
-<h2>3D Print Submission</h2>
+<div class="container">
+    <h2>3D Print Submission</h2>
 
-<label>Name</label>
-<input id="name" placeholder="First and Last Name" required>
+    <div class="grid-2">
+        <div class="form-group">
+            <label for="name">Full Name</label>
+            <input type="text" id="name" placeholder="John Doe" required>
+        </div>
+        <div class="form-group">
+            <label for="studentId">Student ID</label>
+            <input type="text" id="studentId" placeholder="1234567" required>
+        </div>
+    </div>
 
-<label>Student ID</label>
-<input id="studentId" placeholder="Enter ID number" required>
+    <div class="form-group">
+        <label for="fileInput">3D Model File</label>
+        <small>Accepted formats: .STL or .OBJ</small>
+        <input type="file" id="fileInput" accept=".stl,.obj" required>
+    </div>
 
-<label>3D File <small>(STL or OBJ only)</small></label>
-<input type="file" id="fileInput" accept=".stl,.obj" required>
+    <div id="dimensions-box">
+        <strong>Detected Dimensions:</strong>
+        <div id="dimensions-list"></div>
+        <p style="font-size: 0.85rem; margin-top: 5px;"><em>Please verify these scales before submitting.</em></p>
+    </div>
 
-<div id="dimensions"></div>
+    <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 30px 0;">
 
-<hr style="margin-top:25px; border: 0; border-top: 1px solid #eee;">
+    <h3>Print Settings</h3>
+    
+    <div class="grid-2">
+        <div class="form-group">
+            <label for="material">Material</label>
+            <input id="material" placeholder="e.g., PLA, PETG">
+        </div>
+        <div class="form-group">
+            <label for="infill">Infill Percentage</label>
+            <input id="infill" type="number" value="15" min="0" max="100">
+        </div>
+    </div>
 
-<h3>Print Settings</h3>
+    <div class="grid-2">
+        <div class="form-group">
+            <label for="layerHeight">Layer Height (mm)</label>
+            <small>0.2 is standard</small>
+            <input id="layerHeight" value="0.2" step="0.05" type="number">
+        </div>
+        <div class="form-group">
+            <label for="supports">Supports Required?</label>
+            <select id="supports">
+                <option value="No">No</option>
+                <option value="Yes">Yes</option>
+            </select>
+        </div>
+    </div>
 
-<label>Material <small>(PLA is standard)</small></label>
-<input id="material" value="PLA">
+    <div class="form-group">
+        <label for="brim">Enable Brim?</label>
+        <small>Helps with bed adhesion for tall/thin parts</small>
+        <select id="brim">
+            <option value="No">No</option>
+            <option value="Yes">Yes</option>
+        </select>
+    </div>
 
-<label>Infill % <small>(15% is standard for non-functional parts)</small></label>
-<input id="infill" type="number" value="15">
+    <div class="form-group">
+        <label for="notes">Additional Notes</label>
+        <textarea id="notes" rows="3" placeholder="Any specific instructions..."></textarea>
+    </div>
 
-<label>Layer Height (mm) <small>(0.2 = standard, 0.1 = high detail)</small></label>
-<input id="layerHeight" value="0.2">
+    <button onclick="submitForm()">Submit Print Request</button>
+</div>
 
-<label>Supports <small>(Needed for overhangs)</small></label>
-<select id="supports">
-  <option>No</option>
-  <option>Yes</option>
-</select>
-
-<label>Brim <small>(Helps parts stick to the bed)</small></label>
-<select id="brim">
-  <option>No</option>
-  <option>Yes</option>
-</select>
-
-<label>Notes (optional)</label>
-<textarea id="notes" placeholder="Any specific instructions..."></textarea>
-
-<button id="submitBtn" onclick="submitForm()">Submit Request</button>
+<script src="https://cdn.jsdelivr.net/npm/stl-reader-wasm@1.0.1/dist/stl-reader.min.js"></script>
 
 <script>
-let fileBase64 = "";
-let dimX = 0, dimY = 0, dimZ = 0;
+    let fileBase64 = "";
+    let dimX = 0, dimY = 0, dimZ = 0;
 
-const fileInput = document.getElementById("fileInput");
-const dimensionsDiv = document.getElementById("dimensions");
-const submitBtn = document.getElementById("submitBtn");
+    const fileInput = document.getElementById("fileInput");
+    const dimensionsBox = document.getElementById("dimensions-box");
+    const dimensionsList = document.getElementById("dimensions-list");
 
-fileInput.addEventListener("change", handleFile);
+    fileInput.addEventListener("change", handleFile);
 
-async function handleFile(e) {
-  const file = e.target.files[0];
-  if (!file) return;
+    async function handleFile(e) {
+        const file = e.target.files[0];
+        if (!file) return;
 
-  const ext = file.name.split('.').pop().toLowerCase();
-  if (!["stl", "obj"].includes(ext)) {
-    alert("Please upload an STL or OBJ file.");
-    fileInput.value = "";
-    return;
-  }
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!["stl", "obj"].includes(ext)) {
+            alert("Only STL and OBJ files are supported.");
+            fileInput.value = "";
+            return;
+        }
 
-  // Reader for Base64 (Upload)
-  const base64Reader = new FileReader();
-  base64Reader.onload = (event) => {
-    fileBase64 = event.target.result.split(",")[1];
-  };
-  base64Reader.readAsDataURL(file);
+        // Prepare base64 for upload
+        const base64Reader = new FileReader();
+        base64Reader.onload = function(event) {
+            fileBase64 = event.target.result.split(",")[1];
+        };
+        base64Reader.readAsDataURL(file);
 
-  // Reader for Geometry (Dimensions)
-  try {
-    dimensionsDiv.style.display = "block";
-    dimensionsDiv.innerHTML = "<em>Analyzing file geometry...</em>";
+        try {
+            if (ext === "stl") {
+                const buffer = await file.arrayBuffer();
+                const result = window.STLReader.read(buffer);
+                const bounds = result.bounds;
+                dimX = (bounds.max[0] - bounds.min[0]).toFixed(2);
+                dimY = (bounds.max[1] - bounds.min[1]).toFixed(2);
+                dimZ = (bounds.max[2] - bounds.min[2]).toFixed(2);
+            } else {
+                const text = await file.text();
+                parseOBJ(text);
+            }
 
-    if (ext === "stl") {
-      const buffer = await file.arrayBuffer();
-      parseSTL(buffer);
-    } else {
-      const text = await file.text();
-      parseOBJ(text);
+            // Display results
+            dimensionsList.innerHTML = `X: ${dimX} mm | Y: ${dimY} mm | Z: ${dimZ} mm`;
+            dimensionsBox.style.display = "block";
+
+        } catch (err) {
+            console.error(err);
+            alert("Could not read dimensions from this file.");
+        }
     }
 
-    dimensionsDiv.innerHTML = `
-      <div class="dim-box">
-        <strong>Detected Dimensions:</strong><br>
-        X: ${dimX} mm | Y: ${dimY} mm | Z: ${dimZ} mm<br>
-        <small style="color:#d9534f;">Confirm these match your slicer before submitting.</small>
-      </div>
-    `;
-  } catch (err) {
-    console.error(err);
-    dimensionsDiv.innerHTML = "<b style='color:red;'>Error: Could not calculate dimensions.</b>";
-  }
-}
+    function parseOBJ(text) {
+        const lines = text.split("\n");
+        let minX = Infinity, minY = Infinity, minZ = Infinity;
+        let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
 
-function parseSTL(buffer) {
-  const view = new DataView(buffer);
-  let isBinary = true;
-  for (let i = 0; i < 80; i++) {
-    if (view.getUint8(i) === 0) { isBinary = true; break; }
-    if (i === 79) isBinary = false;
-  }
+        lines.forEach(line => {
+            line = line.trim();
+            if (line.startsWith("v ")) {
+                const parts = line.split(/\s+/);
+                const x = parseFloat(parts[1]);
+                const y = parseFloat(parts[2]);
+                const z = parseFloat(parts[3]);
+                minX = Math.min(minX, x); minY = Math.min(minY, y); minZ = Math.min(minZ, z);
+                maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); maxZ = Math.max(maxZ, z);
+            }
+        });
 
-  let min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
-
-  if (isBinary) {
-    const count = view.getUint32(84, true);
-    for (let i = 0; i < count; i++) {
-      for (let v = 0; v < 3; v++) {
-        const offset = 88 + (i * 50) + (v * 12) + 12;
-        updateBounds(view.getFloat32(offset, true), view.getFloat32(offset + 4, true), view.getFloat32(offset + 8, true), min, max);
-      }
+        dimX = (maxX - minX).toFixed(2);
+        dimY = (maxY - minY).toFixed(2);
+        dimZ = (maxZ - minZ).toFixed(2);
     }
-  } else {
-    const text = new TextDecoder().decode(buffer);
-    const matches = text.matchAll(/vertex\s+(-?\d+\.?\d*e?-?\d*)\s+(-?\d+\.?\d*e?-?\d*)\s+(-?\d+\.?\d*e?-?\d*)/gi);
-    for (const m of matches) {
-      updateBounds(parseFloat(m[1]), parseFloat(m[2]), parseFloat(m[3]), min, max);
+
+    function submitForm() {
+        const nameField = document.getElementById("name").value;
+        if (!nameField || !dimX || !dimY || !dimZ) {
+            alert("Please fill in your name and upload a valid 3D file.");
+            return;
+        }
+
+        const data = {
+            name: nameField,
+            studentId: document.getElementById("studentId").value,
+            fileName: fileInput.files[0].name,
+            fileData: fileBase64,
+            mimeType: fileInput.files[0].type,
+            dimX, dimY, dimZ,
+            material: document.getElementById("material").value,
+            infill: document.getElementById("infill").value,
+            layerHeight: document.getElementById("layerHeight").value,
+            supports: document.getElementById("supports").value,
+            brim: document.getElementById("brim").value,
+            notes: document.getElementById("notes").value
+        };
+
+        const submitBtn = document.querySelector("button");
+        submitBtn.innerText = "Submitting...";
+        submitBtn.disabled = true;
+
+        fetch("https://script.google.com/macros/s/AKfycbzrBniPiXCD9yEZlH4s9TjqGcN2UMjGxPhipH98VjVPslUPJvrP37neFRwMAfzVwv4k/exec", {
+            method: "POST",
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.status === "success") {
+                alert("Submission successful.");
+                location.reload();
+            } else {
+                alert("Error: " + res.message);
+                submitBtn.innerText = "Submit Print Request";
+                submitBtn.disabled = false;
+            }
+        })
+        .catch(err => {
+            alert("Submission failed: " + err);
+            submitBtn.innerText = "Submit Print Request";
+            submitBtn.disabled = false;
+        });
     }
-  }
-  dimX = (max[0] - min[0]).toFixed(2);
-  dimY = (max[1] - min[1]).toFixed(2);
-  dimZ = (max[2] - min[2]).toFixed(2);
-}
-
-function parseOBJ(text) {
-  let min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
-  text.split("\n").forEach(line => {
-    if (line.trim().startsWith("v ")) {
-      const p = line.trim().split(/\s+/);
-      updateBounds(parseFloat(p[1]), parseFloat(p[2]), parseFloat(p[3]), min, max);
-    }
-  });
-  dimX = (max[0] - min[0]).toFixed(2);
-  dimY = (max[1] - min[1]).toFixed(2);
-  dimZ = (max[2] - min[2]).toFixed(2);
-}
-
-function updateBounds(x, y, z, min, max) {
-  if (isNaN(x)) return;
-  min[0] = Math.min(min[0], x); max[0] = Math.max(max[0], x);
-  min[1] = Math.min(min[1], y); max[1] = Math.max(max[1], y);
-  min[2] = Math.min(min[2], z); max[2] = Math.max(max[2], z);
-}
-
-function submitForm() {
-  if (!dimX || dimX == 0) return alert("Please upload a valid 3D file first.");
-
-  submitBtn.disabled = true;
-  submitBtn.innerText = "Processing...";
-
-  const data = {
-    name: document.getElementById("name").value,
-    studentId: document.getElementById("studentId").value,
-    fileName: fileInput.files[0].name,
-    fileData: fileBase64,
-    mimeType: fileInput.files[0].type,
-    dimX, dimY, dimZ,
-    material: document.getElementById("material").value,
-    infill: document.getElementById("infill").value,
-    layerHeight: document.getElementById("layerHeight").value,
-    supports: document.getElementById("supports").value,
-    brim: document.getElementById("brim").value,
-    notes: document.getElementById("notes").value
-  };
-
-  fetch("https://script.google.com/macros/s/AKfycbzrBniPiXCD9yEZlH4s9TjqGcN2UMjGxPhipH98VjVPslUPJvrP37neFRwMAfzVwv4k/exec", {
-    method: "POST",
-    body: JSON.stringify(data)
-  })
-  .then(res => res.json())
-  .then(res => {
-    if (res.status === "success") {
-      alert("Print request submitted successfully!");
-      location.reload();
-    } else {
-      alert("Error: " + res.message);
-      submitBtn.disabled = false;
-      submitBtn.innerText = "Submit Request";
-    }
-  })
-  .catch(err => {
-    alert("Submission failed. Please check your connection.");
-    submitBtn.disabled = false;
-    submitBtn.innerText = "Submit Request";
-  });
-}
 </script>
+
 </body>
 </html>
