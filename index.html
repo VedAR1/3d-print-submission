@@ -5,59 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Print Submission</title>
     <style>
-        :root {
-            --primary-color: #2563eb;
-            --bg-color: #f8fafc;
-            --card-bg: #ffffff;
-            --text-color: #1e293b;
-            --border-color: #e2e8f0;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            line-height: 1.6;
-            max-width: 800px;
-            margin: 40px auto;
-            padding: 20px;
-        }
-
-        .container {
-            background: var(--card-bg);
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-
-        h2 { margin-top: 0; color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; }
-        h3 { margin-top: 25px; font-size: 1.2rem; color: #475569; }
-
+        :root { --primary: #2563eb; --bg: #f8fafc; --text: #1e293b; --border: #e2e8f0; }
+        body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); max-width: 700px; margin: 40px auto; padding: 20px; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        h2 { margin-top: 0; color: var(--primary); border-bottom: 2px solid var(--border); padding-bottom: 10px; }
         .form-group { margin-bottom: 15px; }
         label { display: block; font-weight: 600; margin-bottom: 5px; }
-        small { display: block; color: #64748b; font-weight: normal; margin-bottom: 5px; }
-
-        input[type="text"], input[type="number"], select, textarea {
-            width: 100%; padding: 10px; border: 1px solid var(--border-color);
-            border-radius: 6px; box-sizing: border-box; font-size: 1rem;
-        }
-
-        #dimensions-box {
-            margin: 20px 0; padding: 15px; background-color: #f1f5f9;
-            border-left: 4px solid var(--primary-color); border-radius: 4px; display: none;
-        }
-
-        button {
-            background-color: var(--primary-color); color: white; padding: 12px 24px;
-            border: none; border-radius: 6px; font-size: 1rem; font-weight: 600;
-            cursor: pointer; transition: background 0.2s; width: 100%; margin-top: 20px;
-        }
-
-        button:hover { background-color: #1d4ed8; }
-        button:disabled { background-color: #94a3b8; cursor: not-allowed; }
-
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        @media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; }
+        small { color: #64748b; font-size: 0.85rem; }
+        #dim-box { display: none; margin: 20px 0; padding: 15px; background: #eff6ff; border-left: 4px solid var(--primary); border-radius: 4px; }
+        button { background: var(--primary); color: white; padding: 12px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 20px; }
+        button:disabled { background: #94a3b8; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
     </style>
 </head>
 <body>
@@ -65,186 +24,159 @@
 <div class="container">
     <h2>3D Print Submission</h2>
 
-    <div class="grid-2">
-        <div class="form-group">
-            <label for="name">Full Name</label>
-            <input type="text" id="name" required>
-        </div>
-        <div class="form-group">
-            <label for="studentId">Student ID</label>
-            <input type="text" id="studentId" required>
-        </div>
+    <div class="grid">
+        <div class="form-group"><label>Full Name</label><input type="text" id="name" required></div>
+        <div class="form-group"><label>Student ID</label><input type="text" id="studentId" required></div>
     </div>
 
     <div class="form-group">
-        <label for="fileInput">3D Model File</label>
-        <small>Accepted formats: .STL or .OBJ</small>
+        <label>3D Model (STL or OBJ)</label>
         <input type="file" id="fileInput" accept=".stl,.obj" required>
     </div>
 
-    <div id="dimensions-box">
+    <div id="dim-box">
         <strong>Detected Dimensions:</strong>
-        <div id="dimensions-list"></div>
-        <p style="font-size: 0.85rem; margin-top: 5px; color: #ef4444;"><em>Verify these dimensions match your slicer before submitting.</em></p>
+        <div id="dim-list">Calculating...</div>
     </div>
 
-    <h3>Print Settings</h3>
-    
-    <div class="grid-2">
-        <div class="form-group">
-            <label for="material">Material</label>
-            <input id="material" placeholder="e.g., PLA">
-        </div>
-        <div class="form-group">
-            <label for="infill">Infill %</label>
-            <input id="infill" type="number" value="15">
-        </div>
+    <div class="grid">
+        <div class="form-group"><label>Material</label><input id="material" placeholder="PLA"></div>
+        <div class="form-group"><label>Infill %</label><input id="infill" type="number" value="15"></div>
     </div>
 
-    <div class="grid-2">
-        <div class="form-group">
-            <label for="layerHeight">Layer Height (mm)</label>
-            <input id="layerHeight" value="0.2" type="number" step="0.01">
-        </div>
-        <div class="form-group">
-            <label for="supports">Supports</label>
-            <select id="supports">
-                <option value="No">No</option>
-                <option value="Yes">Yes</option>
-            </select>
-        </div>
+    <div class="grid">
+        <div class="form-group"><label>Supports</label><select id="supports"><option>No</option><option>Yes</option></select></div>
+        <div class="form-group"><label>Brim</label><select id="brim"><option>No</option><option>Yes</option></select></div>
     </div>
 
-    <div class="form-group">
-        <label for="brim">Brim</label>
-        <select id="brim">
-            <option value="No">No</option>
-            <option value="Yes">Yes</option>
-        </select>
-    </div>
+    <div class="form-group"><label>Notes</label><textarea id="notes" rows="2"></textarea></div>
 
-    <div class="form-group">
-        <label for="notes">Notes</label>
-        <textarea id="notes" rows="2"></textarea>
-    </div>
-
-    <button id="submitBtn" onclick="submitForm()">Submit Print Request</button>
+    <button id="submitBtn" onclick="submitForm()">Submit Request</button>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/STLLoader.js"></script>
-
 <script>
-    let fileBase64 = "";
-    let dimX = 0, dimY = 0, dimZ = 0;
+    let fileData = { base64: "", name: "", type: "", x: 0, y: 0, z: 0 };
 
-    const fileInput = document.getElementById("fileInput");
-    const dimensionsBox = document.getElementById("dimensions-box");
-    const dimensionsList = document.getElementById("dimensions-list");
-
-    fileInput.addEventListener("change", handleFile);
-
-    async function handleFile(e) {
+    document.getElementById('fileInput').addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-
+        
+        fileData.name = file.name;
+        fileData.type = file.type;
         const ext = file.name.split('.').pop().toLowerCase();
         
-        // Reset dimensions
-        dimX = dimY = dimZ = 0;
-        dimensionsBox.style.display = "none";
+        // Show box and reset text
+        const box = document.getElementById('dim-box');
+        const list = document.getElementById('dim-list');
+        box.style.display = "block";
+        list.innerText = "Processing file...";
 
-        const base64Reader = new FileReader();
-        base64Reader.onload = (ev) => fileBase64 = ev.target.result.split(",")[1];
-        base64Reader.readAsDataURL(file);
+        // Convert to Base64 for upload
+        const reader = new FileReader();
+        reader.onload = (ev) => fileData.base64 = ev.target.result.split(',')[1];
+        reader.readAsDataURL(file);
 
         try {
-            if (ext === "stl") {
+            if (ext === 'stl') {
                 const buffer = await file.arrayBuffer();
-                const loader = new THREE.STLLoader();
-                const geometry = loader.parse(buffer);
-                
-                geometry.computeBoundingBox();
-                const box = geometry.boundingBox;
-                
-                dimX = Math.abs(box.max.x - box.min.x).toFixed(2);
-                dimY = Math.abs(box.max.y - box.min.y).toFixed(2);
-                dimZ = Math.abs(box.max.z - box.min.z).toFixed(2);
-            } else if (ext === "obj") {
+                parseSTL(buffer);
+            } else {
                 const text = await file.text();
                 parseOBJ(text);
             }
-
-            if (dimX > 0 && !isNaN(dimX)) {
-                dimensionsList.innerHTML = `X: ${dimX} mm | Y: ${dimY} mm | Z: ${dimZ} mm`;
-                dimensionsBox.style.display = "block";
-            } else {
-                alert("Could not detect model dimensions. Please ensure the file is valid.");
-            }
+            
+            list.innerHTML = `<strong>X:</strong> ${fileData.x}mm | <strong>Y:</strong> ${fileData.y}mm | <strong>Z:</strong> ${fileData.z}mm`;
         } catch (err) {
+            list.innerText = "Error: Could not calculate dimensions.";
             console.error(err);
-            alert("Error reading 3D file structure.");
         }
+    });
+
+    function parseSTL(buffer) {
+        const view = new DataView(buffer);
+        // Basic check: is it ASCII or Binary?
+        const isBinary = buffer.byteLength > 84 && view.getUint32(80, true) * 50 + 84 === buffer.byteLength;
+        
+        let min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+
+        if (isBinary) {
+            const count = view.getUint32(80, true);
+            for (let i = 0; i < count; i++) {
+                for (let v = 0; v < 3; v++) {
+                    const offset = 84 + (i * 50) + 12 + (v * 12);
+                    const x = view.getFloat32(offset, true);
+                    const y = view.getFloat32(offset + 4, true);
+                    const z = view.getFloat32(offset + 8, true);
+                    updateBounds(x, y, z, min, max);
+                }
+            }
+        } else {
+            const text = new TextDecoder().decode(buffer);
+            const lines = text.split('\n');
+            lines.forEach(line => {
+                if (line.includes('vertex')) {
+                    const parts = line.trim().split(/\s+/);
+                    updateBounds(parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3]), min, max);
+                }
+            });
+        }
+        finalizeDims(min, max);
     }
 
     function parseOBJ(text) {
-        const lines = text.split("\n");
-        let minX = Infinity, minY = Infinity, minZ = Infinity;
-        let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
-        let found = false;
-
-        for (let line of lines) {
-            line = line.trim();
-            if (line.startsWith("v ")) {
-                const p = line.split(/\s+/);
-                const x = parseFloat(p[1]), y = parseFloat(p[2]), z = parseFloat(p[3]);
-                if (!isNaN(x)) {
-                    found = true;
-                    minX = Math.min(minX, x); maxX = Math.max(maxX, x);
-                    minY = Math.min(minY, y); maxY = Math.max(maxY, y);
-                    minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z);
-                }
+        let min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+        text.split('\n').forEach(line => {
+            if (line.startsWith('v ')) {
+                const p = line.trim().split(/\s+/);
+                updateBounds(parseFloat(p[1]), parseFloat(p[2]), parseFloat(p[3]), min, max);
             }
-        }
-        if (found) {
-            dimX = (maxX - minX).toFixed(2);
-            dimY = (maxY - minY).toFixed(2);
-            dimZ = (maxZ - minZ).toFixed(2);
-        }
+        });
+        finalizeDims(min, max);
+    }
+
+    function updateBounds(x, y, z, min, max) {
+        if (isNaN(x) || isNaN(y) || isNaN(z)) return;
+        min[0] = Math.min(min[0], x); max[0] = Math.max(max[0], x);
+        min[1] = Math.min(min[1], y); max[1] = Math.max(max[1], y);
+        min[2] = Math.min(min[2], z); max[2] = Math.max(max[2], z);
+    }
+
+    function finalizeDims(min, max) {
+        fileData.x = (max[0] - min[0]).toFixed(2);
+        fileData.y = (max[1] - min[1]).toFixed(2);
+        fileData.z = (max[2] - min[2]).toFixed(2);
     }
 
     function submitForm() {
-        const btn = document.getElementById("submitBtn");
-        if (!dimX || dimX <= 0) return alert("Please upload a valid 3D file first.");
+        const btn = document.getElementById('submitBtn');
+        if (fileData.x <= 0 || isNaN(fileData.x)) return alert("Please upload a valid 3D file.");
         
         btn.disabled = true;
         btn.innerText = "Uploading...";
 
-        const data = {
-            name: document.getElementById("name").value,
-            studentId: document.getElementById("studentId").value,
-            fileName: fileInput.files[0].name,
-            fileData: fileBase64,
-            mimeType: fileInput.files[0].type,
-            dimX, dimY, dimZ,
-            material: document.getElementById("material").value,
-            infill: document.getElementById("infill").value,
-            layerHeight: document.getElementById("layerHeight").value,
-            supports: document.getElementById("supports").value,
-            brim: document.getElementById("brim").value,
-            notes: document.getElementById("notes").value
+        const payload = {
+            name: document.getElementById('name').value,
+            studentId: document.getElementById('studentId').value,
+            fileName: fileData.name,
+            fileData: fileData.base64,
+            dimX: fileData.x, dimY: fileData.y, dimZ: fileData.z,
+            material: document.getElementById('material').value,
+            infill: document.getElementById('infill').value,
+            supports: document.getElementById('supports').value,
+            brim: document.getElementById('brim').value,
+            notes: document.getElementById('notes').value
         };
 
         fetch("https://script.google.com/macros/s/AKfycbzrBniPiXCD9yEZlH4s9TjqGcN2UMjGxPhipH98VjVPslUPJvrP37neFRwMAfzVwv4k/exec", {
             method: "POST",
-            body: JSON.stringify(data)
+            body: JSON.stringify(payload)
         })
         .then(r => r.json())
         .then(res => {
-            if (res.status === "success") { alert("Submission Successful!"); location.reload(); }
-            else { alert("Error: " + res.message); btn.disabled = false; btn.innerText = "Submit Print Request"; }
+            if (res.status === "success") { alert("Success!"); location.reload(); }
+            else { alert("Error: " + res.message); btn.disabled = false; btn.innerText = "Submit Request"; }
         })
-        .catch(e => { alert("Failed: " + e); btn.disabled = false; btn.innerText = "Submit Print Request"; });
+        .catch(e => { alert("Failed to connect."); btn.disabled = false; btn.innerText = "Submit Request"; });
     }
 </script>
 </body>
