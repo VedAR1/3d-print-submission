@@ -1,74 +1,204 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="UTF-8">
   <title>3D Print Submission</title>
-  <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; max-width: 900px; margin: 2rem auto; padding: 0 1rem; color: #111; }
-    header { display:flex; align-items:center; gap:16px; }
-    h1 { margin: 0; }
-    form { margin-top: 1.25rem; display:grid; gap:0.75rem; }
-    label { font-weight:600; }
-    input, textarea, select { padding:0.5rem; border:1px solid #ccc; border-radius:6px; }
-    .note { font-size:0.9rem; color:#444; }
-    .actions { margin-top:1rem; }
-    button{ background:#0366d6; color:#fff; border:none; padding:0.6rem 1rem; border-radius:6px; cursor:pointer }
-    button:disabled{ opacity:0.6 }
-    footer{ margin-top:2rem; font-size:0.9rem; color:#555 }
-  </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/loaders/STLLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/loaders/OBJLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/exporters/STLExporter.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/utils/BufferGeometryUtils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/occt-import-js@0.0.23/dist/occt-import.min.js"></script>
 </head>
-<body>
-  <header>
-    <h1>3D Print Submission</h1>
-  </header>
 
-  <p class="note">Use this form to submit a 3D model for printing. Please provide an STL/OBJ file and any printing notes.</p>
+<body style="font-family: Arial; max-width: 800px; margin: auto;">
 
-  <form id="submission" action="#" method="post" enctype="multipart/form-data">
-    <div>
-      <label for="name">Your name</label>
-      <input id="name" name="name" type="text" placeholder="Jane Doe" required>
-    </div>
+<h2>3D Print Submission Portal</h2>
 
-    <div>
-      <label for="email">Email</label>
-      <input id="email" name="email" type="email" placeholder="you@example.com" required>
-    </div>
+<label><b>Name</b></label><br>
+<input id="name"><br><br>
 
-    <div>
-      <label for="model">Model name</label>
-      <input id="model" name="model" type="text" placeholder="Widget v2">
-    </div>
+<label><b>Student ID</b></label><br>
+<input id="id"><br><br>
 
-    <div>
-      <label for="file">3D file (STL / OBJ)</label>
-      <input id="file" name="file" type="file" accept=".stl,.obj" required>
-    </div>
+<label><b>3D File (STL, OBJ, STEP)</b></label><br>
+<input type="file" id="file" accept=".stl,.obj,.step,.stp"><br><br>
 
-    <div>
-      <label for="notes">Printing notes</label>
-      <textarea id="notes" name="notes" rows="4" placeholder="Material, infill, orientation, supports..."></textarea>
-    </div>
+<hr>
 
-    <div class="actions">
-      <button type="submit">Submit</button>
-    </div>
-  </form>
+<h3>Basic Settings</h3>
 
-  <footer>
-    <p>Guidelines: Keep file size under 50MB. Make sure models are manifold and scaled correctly.</p>
-  </footer>
+<label>Filament Type</label><br>
+<small>Material used for printing</small><br>
+<select id="filament">
+  <option>PLA</option>
+  <option>PETG</option>
+  <option>ABS</option>
+</select><br><br>
 
-  <script>
-    // Minimal client-side validation example
-    document.getElementById('submission').addEventListener('submit', function(e){
-      const f = document.getElementById('file');
-      if (!f.files || f.files.length === 0) {
-        e.preventDefault();
-        alert('Please attach an STL or OBJ file.');
-      }
-    });
-  </script>
+<label>Infill %</label><br>
+<small>Internal density of the print</small><br>
+<input id="infill" type="number" value="20"><br><br>
+
+<label>Layer Height (mm)</label><br>
+<small>Vertical resolution – lower = higher quality</small><br>
+<input id="layer" type="number" value="0.2"><br><br>
+
+<button onclick="toggleAdvanced()">Show Advanced Options</button>
+
+<div id="advanced" style="display:none; border:1px solid #ccc; padding:10px; margin-top:10px;">
+
+  <h4>Advanced Options</h4>
+
+  <label>Supports</label><br>
+  <small>Extra structures for overhangs</small><br>
+  <select id="supports">
+    <option>No</option>
+    <option>Yes</option>
+  </select><br><br>
+
+  <label>Nozzle Size (mm)</label><br>
+  <small>Diameter of the printer nozzle</small><br>
+  <input id="nozzle" type="number" value="0.4"><br><br>
+
+  <label>Print Speed (mm/s)</label><br>
+  <small>Movement speed of printer</small><br>
+  <input id="speed" type="number" value="50"><br><br>
+
+  <label>Wall Perimeters</label><br>
+  <small>Number of outer shells</small><br>
+  <input id="walls" type="number" value="2"><br><br>
+
+  <label>Top/Bottom Layers</label><br>
+  <small>Solid layers on top and bottom</small><br>
+  <input id="topbottom" type="number" value="4"><br><br>
+</div>
+
+<hr>
+
+<h3>Detected Dimensions (mm)</h3>
+<div id="dims">Upload file to calculate dimensions</div><br>
+
+<input type="checkbox" id="confirm">
+<b>I confirm these dimensions are correct</b><br><br>
+
+<button onclick="submitForm()">Submit</button>
+
+<script>
+let dims = {};
+let finalSTL = null;
+let finalFileName = null;
+
+function toggleAdvanced() {
+  const adv = document.getElementById("advanced");
+  adv.style.display = adv.style.display === "none" ? "block" : "none";
+}
+
+document.getElementById("file").addEventListener("change", async function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const ext = file.name.split(".").pop().toLowerCase();
+  const reader = new FileReader();
+
+  reader.onload = async function(ev) {
+    if (ext === "stl") handleSTL(ev.target.result, file.name);
+    else if (ext === "obj") handleOBJ(ev.target.result, file.name);
+    else if (ext === "step" || ext === "stp") await handleSTEP(ev.target.result, file.name);
+    else alert("Unsupported file type.");
+  };
+
+  if (ext === "stl") reader.readAsArrayBuffer(file);
+  else if (ext === "obj") reader.readAsText(file);
+  else reader.readAsArrayBuffer(file);
+});
+
+function handleSTL(buffer, name) {
+  const loader = new THREE.STLLoader();
+  const geometry = loader.parse(buffer);
+  processGeometry(geometry, name);
+}
+
+function handleOBJ(text, name) {
+  const loader = new THREE.OBJLoader();
+  const obj = loader.parse(text);
+  let geoms = [];
+  obj.traverse(c => {
+    if (c.isMesh) {
+      let g = c.geometry.clone();
+      g.applyMatrix4(c.matrixWorld);
+      geoms.push(g);
+    }
+  });
+  const merged = THREE.BufferGeometryUtils.mergeBufferGeometries(geoms);
+  processGeometry(merged, name.replace(/\.[^/.]+$/, ".stl"));
+}
+
+async function handleSTEP(buffer, name) {
+  const occt = await occtImportJS();
+  const result = occt.ReadStepFile(buffer, { linearDeflection: 0.1, angularDeflection: 0.5 });
+
+  let geoms = [];
+  result.meshes.forEach(m => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(m.attributes.position.array, 3));
+    geoms.push(g);
+  });
+
+  const merged = THREE.BufferGeometryUtils.mergeBufferGeometries(geoms);
+  processGeometry(merged, name.replace(/\.[^/.]+$/, ".stl"));
+}
+
+function processGeometry(geometry, name) {
+  geometry.computeBoundingBox();
+  const b = geometry.boundingBox;
+  dims.x = (b.max.x - b.min.x).toFixed(2);
+  dims.y = (b.max.y - b.min.y).toFixed(2);
+  dims.z = (b.max.z - b.min.z).toFixed(2);
+
+  document.getElementById("dims").innerText = `X: ${dims.x} | Y: ${dims.y} | Z: ${dims.z}`;
+
+  const exporter = new THREE.STLExporter();
+  const mesh = new THREE.Mesh(geometry);
+  finalSTL = exporter.parse(mesh);
+  finalFileName = name;
+}
+
+function submitForm() {
+  if (!document.getElementById("confirm").checked) {
+    alert("Confirm dimensions first.");
+    return;
+  }
+
+  const payload = {
+    studentName: name.value,
+    studentId: id.value,
+    filament: filament.value,
+    infill: infill.value,
+    layerHeight: layer.value,
+    supports: supports.value,
+    nozzle: nozzle.value,
+    speed: speed.value,
+    walls: walls.value,
+    topbottom: topbottom.value,
+    dimX: dims.x,
+    dimY: dims.y,
+    dimZ: dims.z,
+    fileName: finalFileName,
+    mimeType: "application/sla",
+    file: btoa(finalSTL)
+  };
+
+  fetch("PUT_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(() => alert("Submitted successfully"))
+  .catch(e => alert("Error: " + e));
+}
+</script>
+
 </body>
 </html>
