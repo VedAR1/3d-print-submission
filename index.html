@@ -52,10 +52,6 @@
 <br><br>
 <button onclick="submitForm()">Submit</button>
 
-<script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
-<script src="https://unpkg.com/three@0.158.0/examples/js/loaders/STLLoader.js"></script>
-<script src="https://unpkg.com/three@0.158.0/examples/js/loaders/OBJLoader.js"></script>
-
 <script>
 let fileBase64 = "";
 let dimX = 0, dimY = 0, dimZ = 0;
@@ -76,49 +72,46 @@ function handleFile(e) {
     return;
   }
 
-  // Read Base64 for upload
+  // Base64 for upload
   const base64Reader = new FileReader();
   base64Reader.onload = function(event) {
     fileBase64 = event.target.result.split(",")[1];
   };
   base64Reader.readAsDataURL(file);
 
-  // Read for dimensions
   const reader = new FileReader();
-
   reader.onload = function(event) {
-    const scene = new THREE.Scene();
-    let object;
-
     try {
+      let vertices = [];
+
       if (ext === "stl") {
-        const loader = new THREE.STLLoader();
-        const geometry = loader.parse(event.target.result);
-        const material = new THREE.MeshBasicMaterial();
-        object = new THREE.Mesh(geometry, material);
+        const buffer = normalizeSTLBuffer(event.target.result);
+        vertices = parseSTL(buffer);
+      } else {
+        vertices = parseOBJ(event.target.result);
       }
 
-      if (ext === "obj") {
-        const loader = new THREE.OBJLoader();
-        object = loader.parse(event.target.result);
-      }
+      if (vertices.length === 0) throw new Error("No vertices parsed.");
 
-      scene.add(object);
-      object.updateMatrixWorld(true);
+      let minX = Infinity, minY = Infinity, minZ = Infinity;
+      let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
 
-      const box = new THREE.Box3().setFromObject(object);
+      vertices.forEach(v => {
+        minX = Math.min(minX, v[0]);
+        minY = Math.min(minY, v[1]);
+        minZ = Math.min(minZ, v[2]);
+        maxX = Math.max(maxX, v[0]);
+        maxY = Math.max(maxY, v[1]);
+        maxZ = Math.max(maxZ, v[2]);
+      });
 
-      dimX = (box.max.x - box.min.x).toFixed(2);
-      dimY = (box.max.y - box.min.y).toFixed(2);
-      dimZ = (box.max.z - box.min.z).toFixed(2);
-
-      if (isNaN(dimX) || isNaN(dimY) || isNaN(dimZ)) {
-        throw new Error("Dimension calculation failed.");
-      }
+      dimX = (maxX - minX).toFixed(2);
+      dimY = (maxY - minY).toFixed(2);
+      dimZ = (maxZ - minZ).toFixed(2);
 
       dimensionsDiv.innerHTML = `
         <div style="margin-top:10px; padding:10px; border:1px solid #ccc;">
-          <b>Detected Dimensions (mm)</b><br>
+          <b>Detected Dimensions</b><br>
           X: ${dimX} mm<br>
           Y: ${dimY} mm<br>
           Z: ${dimZ} mm<br><br>
@@ -132,11 +125,61 @@ function handleFile(e) {
     }
   };
 
-  if (ext === "stl") {
-    reader.readAsArrayBuffer(file);
-  } else {
-    reader.readAsText(file);
+  if (ext === "stl") reader.readAsArrayBuffer(file);
+  else reader.readAsText(file);
+}
+
+/* ---------- NORMALIZER ---------- */
+function normalizeSTLBuffer(buffer) {
+  // Force copy into clean ArrayBuffer to strip browser quirks
+  const uint8 = new Uint8Array(buffer);
+  const clean = new Uint8Array(uint8.length);
+  clean.set(uint8);
+  return clean.buffer;
+}
+
+/* ---------- STL PARSER ---------- */
+function parseSTL(buffer) {
+  const dv = new DataView(buffer);
+  const vertices = [];
+
+  const faceCount = dv.getUint32(80, true);
+  let offset = 84;
+
+  for (let i = 0; i < faceCount; i++) {
+    offset += 12; // normal
+
+    for (let j = 0; j < 3; j++) {
+      const x = dv.getFloat32(offset, true);
+      const y = dv.getFloat32(offset + 4, true);
+      const z = dv.getFloat32(offset + 8, true);
+      vertices.push([x, y, z]);
+      offset += 12;
+    }
+
+    offset += 2; // attribute byte count
   }
+
+  return vertices;
+}
+
+/* ---------- OBJ PARSER ---------- */
+function parseOBJ(text) {
+  const vertices = [];
+  const lines = text.split("\n");
+
+  lines.forEach(line => {
+    line = line.trim();
+    if (line.startsWith("v ")) {
+      const parts = line.split(/\s+/);
+      const x = parseFloat(parts[1]);
+      const y = parseFloat(parts[2]);
+      const z = parseFloat(parts[3]);
+      vertices.push([x, y, z]);
+    }
+  });
+
+  return vertices;
 }
 
 function submitForm() {
@@ -178,6 +221,7 @@ function submitForm() {
   .catch(err => alert("Submission failed: " + err));
 }
 </script>
+
 
 
 
