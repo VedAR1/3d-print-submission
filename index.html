@@ -131,7 +131,8 @@
     <button id="submitBtn" onclick="submitForm()">Submit Print Request</button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/stl-reader-wasm@1.0.1/dist/stl-reader.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/STLLoader.js"></script>
 
 <script>
     let fileBase64 = "";
@@ -149,6 +150,10 @@
 
         const ext = file.name.split('.').pop().toLowerCase();
         
+        // Reset dimensions
+        dimX = dimY = dimZ = 0;
+        dimensionsBox.style.display = "none";
+
         const base64Reader = new FileReader();
         base64Reader.onload = (ev) => fileBase64 = ev.target.result.split(",")[1];
         base64Reader.readAsDataURL(file);
@@ -156,24 +161,29 @@
         try {
             if (ext === "stl") {
                 const buffer = await file.arrayBuffer();
-                const result = window.STLReader.read(buffer);
-                if (result && result.bounds) {
-                    dimX = Math.abs(result.bounds.max[0] - result.bounds.min[0]).toFixed(2);
-                    dimY = Math.abs(result.bounds.max[1] - result.bounds.min[1]).toFixed(2);
-                    dimZ = Math.abs(result.bounds.max[2] - result.bounds.min[2]).toFixed(2);
-                }
+                const loader = new THREE.STLLoader();
+                const geometry = loader.parse(buffer);
+                
+                geometry.computeBoundingBox();
+                const box = geometry.boundingBox;
+                
+                dimX = Math.abs(box.max.x - box.min.x).toFixed(2);
+                dimY = Math.abs(box.max.y - box.min.y).toFixed(2);
+                dimZ = Math.abs(box.max.z - box.min.z).toFixed(2);
             } else if (ext === "obj") {
                 const text = await file.text();
                 parseOBJ(text);
             }
 
-            if (dimX > 0) {
+            if (dimX > 0 && !isNaN(dimX)) {
                 dimensionsList.innerHTML = `X: ${dimX} mm | Y: ${dimY} mm | Z: ${dimZ} mm`;
                 dimensionsBox.style.display = "block";
+            } else {
+                alert("Could not detect model dimensions. Please ensure the file is valid.");
             }
         } catch (err) {
             console.error(err);
-            alert("Error reading file dimensions.");
+            alert("Error reading 3D file structure.");
         }
     }
 
@@ -205,7 +215,7 @@
 
     function submitForm() {
         const btn = document.getElementById("submitBtn");
-        if (!dimX || dimX <= 0) return alert("Please upload a valid 3D file.");
+        if (!dimX || dimX <= 0) return alert("Please upload a valid 3D file first.");
         
         btn.disabled = true;
         btn.innerText = "Uploading...";
@@ -231,10 +241,10 @@
         })
         .then(r => r.json())
         .then(res => {
-            if (res.status === "success") { alert("Success!"); location.reload(); }
-            else { alert("Error: " + res.message); btn.disabled = false; btn.innerText = "Submit"; }
+            if (res.status === "success") { alert("Submission Successful!"); location.reload(); }
+            else { alert("Error: " + res.message); btn.disabled = false; btn.innerText = "Submit Print Request"; }
         })
-        .catch(e => { alert("Failed: " + e); btn.disabled = false; btn.innerText = "Submit"; });
+        .catch(e => { alert("Failed: " + e); btn.disabled = false; btn.innerText = "Submit Print Request"; });
     }
 </script>
 </body>
