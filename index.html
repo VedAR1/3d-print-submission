@@ -12,7 +12,6 @@
         .form-group { margin-bottom: 15px; }
         label { display: block; font-weight: 600; margin-bottom: 5px; }
         input, select, textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; }
-        small { color: #64748b; font-size: 0.85rem; }
         #dim-box { display: none; margin: 20px 0; padding: 15px; background: #eff6ff; border-left: 4px solid var(--primary); border-radius: 4px; }
         button { background: var(--primary); color: white; padding: 12px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 20px; }
         button:disabled { background: #94a3b8; }
@@ -30,8 +29,8 @@
     </div>
 
     <div class="form-group">
-        <label>3D Model (STL or OBJ)</label>
-        <input type="file" id="fileInput" accept=".stl,.obj" required>
+        <label>3D Model (STL, OBJ, STEP, 3MF)</label>
+        <input type="file" id="fileInput" accept=".stl,.obj,.step,.stp,.3mf" required>
     </div>
 
     <div id="dim-box">
@@ -55,7 +54,7 @@
 </div>
 
 <script>
-    let fileData = { base64: "", name: "", type: "", x: 0, y: 0, z: 0 };
+    let fileData = { base64: "", name: "", type: "", x: "N/A", y: "N/A", z: "N/A" };
 
     document.getElementById('fileInput').addEventListener('change', async (e) => {
         const file = e.target.files[0];
@@ -65,54 +64,50 @@
         fileData.type = file.type;
         const ext = file.name.split('.').pop().toLowerCase();
         
-        // Show box and reset text
         const box = document.getElementById('dim-box');
         const list = document.getElementById('dim-list');
-        box.style.display = "block";
-        list.innerText = "Processing file...";
 
-        // Convert to Base64 for upload
         const reader = new FileReader();
         reader.onload = (ev) => fileData.base64 = ev.target.result.split(',')[1];
         reader.readAsDataURL(file);
 
-        try {
-            if (ext === 'stl') {
-                const buffer = await file.arrayBuffer();
-                parseSTL(buffer);
-            } else {
-                const text = await file.text();
-                parseOBJ(text);
+        // Only parse dimensions for STL and OBJ
+        if (ext === 'stl' || ext === 'obj') {
+            box.style.display = "block";
+            list.innerText = "Processing file...";
+            try {
+                if (ext === 'stl') {
+                    const buffer = await file.arrayBuffer();
+                    parseSTL(buffer);
+                } else {
+                    const text = await file.text();
+                    parseOBJ(text);
+                }
+                list.innerHTML = `<strong>X:</strong> ${fileData.x}mm | <strong>Y:</strong> ${fileData.y}mm | <strong>Z:</strong> ${fileData.z}mm`;
+            } catch (err) {
+                list.innerText = "Dimensions unavailable for this file.";
             }
-            
-            list.innerHTML = `<strong>X:</strong> ${fileData.x}mm | <strong>Y:</strong> ${fileData.y}mm | <strong>Z:</strong> ${fileData.z}mm`;
-        } catch (err) {
-            list.innerText = "Error: Could not calculate dimensions.";
-            console.error(err);
+        } else {
+            // Hide for STEP/3MF
+            box.style.display = "none";
+            fileData.x = "N/A"; fileData.y = "N/A"; fileData.z = "N/A";
         }
     });
 
     function parseSTL(buffer) {
         const view = new DataView(buffer);
-        // Basic check: is it ASCII or Binary?
         const isBinary = buffer.byteLength > 84 && view.getUint32(80, true) * 50 + 84 === buffer.byteLength;
-        
         let min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
-
         if (isBinary) {
             const count = view.getUint32(80, true);
             for (let i = 0; i < count; i++) {
                 for (let v = 0; v < 3; v++) {
                     const offset = 84 + (i * 50) + 12 + (v * 12);
-                    const x = view.getFloat32(offset, true);
-                    const y = view.getFloat32(offset + 4, true);
-                    const z = view.getFloat32(offset + 8, true);
-                    updateBounds(x, y, z, min, max);
+                    updateBounds(view.getFloat32(offset, true), view.getFloat32(offset + 4, true), view.getFloat32(offset + 8, true), min, max);
                 }
             }
         } else {
-            const text = new TextDecoder().decode(buffer);
-            const lines = text.split('\n');
+            const lines = new TextDecoder().decode(buffer).split('\n');
             lines.forEach(line => {
                 if (line.includes('vertex')) {
                     const parts = line.trim().split(/\s+/);
@@ -149,7 +144,7 @@
 
     function submitForm() {
         const btn = document.getElementById('submitBtn');
-        if (fileData.x <= 0 || isNaN(fileData.x)) return alert("Please upload a valid 3D file.");
+        if (!fileData.base64) return alert("Please upload a 3D file.");
         
         btn.disabled = true;
         btn.innerText = "Uploading...";
@@ -167,7 +162,7 @@
             notes: document.getElementById('notes').value
         };
 
-        fetch("https://script.google.com/macros/s/AKfycbzrBniPiXCD9yEZlH4s9TjqGcN2UMjGxPhipH98VjVPslUPJvrP37neFRwMAfzVwv4k/exec", {
+        fetch("YOUR_APPS_SCRIPT_URL_HERE", {
             method: "POST",
             body: JSON.stringify(payload)
         })
